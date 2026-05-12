@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Worker dashboard — Interns for AI</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a href="/" class="logo">Interns for AI</a>
+      <nav><a href="/about/">About</a></nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>Worker dashboard</h1>
+    <div id="error" class="error-box" style="display:none;"></div>
+    <div id="no-token" class="card" style="display:none;">
+      <p>This page is accessed via a one-time magic link. Apply at <a href="/apply/">/apply/</a>; we email a link after your test verdict.</p>
+    </div>
+    <div id="content" style="display:none;">
+      <div class="card">
+        <h2 id="welcome" style="margin-top:0;">Welcome</h2>
+        <div class="kv" id="profile-kv"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0;">Reputation</h3>
+        <div class="stat" style="display:inline-block;"><div class="n" id="rep">—</div><div class="l">attested score (0-100)</div></div>
+        <p class="muted">Your score updates after each accepted task. v0 is a simple weighted average; v1 is cryptographically attested via <a href="https://github.com/CrunchyJohnHaven/calm-vault">Calm Vault</a> Component 3.</p>
+      </div>
+
+      <h2>Your tasks</h2>
+      <div id="my-tasks"></div>
+
+      <h2>Open tasks</h2>
+      <div id="open-tasks"></div>
+
+      <h2>Payments</h2>
+      <div id="payments"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <a href="/">Home</a> · <a href="/about/">About</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a>
+  </footer>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token") || "";
+    const errBox = document.getElementById("error");
+    const noTokenEl = document.getElementById("no-token");
+    const contentEl = document.getElementById("content");
+
+    function escape(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+    }
+    function showError(msg) { errBox.textContent = msg; errBox.style.display = "block"; }
+
+    if (!token) {
+      noTokenEl.style.display = "block";
+    } else {
+      load();
+    }
+
+    async function load() {
+      try {
+        const res = await fetch(`/api/worker/me?token=${encodeURIComponent(token)}`);
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          showError(data.error || "Failed to load dashboard.");
+          return;
+        }
+        render(data);
+        contentEl.style.display = "block";
+      } catch (e) { showError("Network error."); }
+    }
+
+    function render(data) {
+      const me = data.me;
+      document.getElementById("welcome").textContent = `Welcome, ${me.display_name}`;
+      const tracks = (me.tracks || []).join(", ");
+      document.getElementById("profile-kv").innerHTML = `
+        <div class="k">Email</div><div>${escape(me.email)}</div>
+        <div class="k">Country / TZ</div><div>${escape(me.country)} · ${escape(me.timezone)}</div>
+        <div class="k">Tracks</div><div>${escape(tracks)}</div>
+        <div class="k">Status</div><div><span class="tag ${me.status}">${escape(me.status)}</span></div>
+        <div class="k">Availability</div><div>${me.availability_hours} h/wk</div>
+        <div class="k">Pay</div><div>${escape(me.pay_method)} → <code>${escape(me.pay_address)}</code></div>
+      `;
+      document.getElementById("rep").textContent = Math.round(me.reputation || 0);
+
+      const myTasksEl = document.getElementById("my-tasks");
+      const my = data.my_assignments || [];
+      if (my.length === 0) myTasksEl.innerHTML = '<p class="muted">No tasks yet. Open tasks below.</p>';
+      else {
+        myTasksEl.innerHTML = my.map(t => {
+          const deadline = t.deadline_at ? new Date(t.deadline_at * 1000).toISOString().slice(0,16).replace("T"," ") + " UTC" : "—";
+          const submission = t.status === "claimed" ? `
+            <details><summary>Submit work</summary>
+              <textarea rows="6" id="sub-${t.assignment_id}" style="width:100%;padding:8px;font:inherit;border:1px solid var(--rule);border-radius:5px;margin-top:6px;"></textarea>
+              <p><button class="btn sm" data-submit="${t.assignment_id}">Submit</button> <span class="muted" id="submit-msg-${t.assignment_id}"></span></p>
+            </details>` : "";
+          const sub = t.submission_text ? `<div class="muted" style="margin-top:6px;">Your submission: <pre class="json">${escape(t.submission_text)}</pre></div>` : "";
+          const review = t.admin_review ? `<div class="muted">Admin review: ${escape(t.admin_review)}</div>` : "";
+          return `<div class="card">
+            <div class="flex flex-wrap" style="gap:10px;">
+              <strong>${escape(t.title)}</strong>
+              ${t.is_trial ? '<span class="tag shortlist">trial</span>' : ''}
+              <span class="tag ${t.status}">${t.status}</span>
+              <span class="spacer"></span>
+              <span class="muted">$${Number(t.pay_amount_usd).toFixed(2)}</span>
+            </div>
+            <p>${escape(t.brief)}</p>
+            <div class="tiny">Deadline: ${deadline}</div>
+            ${submission}
+            ${sub}
+            ${review}
+          </div>`;
+        }).join("");
+      }
+
+      const openEl = document.getElementById("open-tasks");
+      const open = data.open_tasks || [];
+      if (open.length === 0) openEl.innerHTML = '<p class="muted">No open tasks matching your tracks right now. Check back tomorrow.</p>';
+      else {
+        openEl.innerHTML = open.map(t => `<div class="card">
+          <div class="flex flex-wrap" style="gap:10px;">
+            <strong>${escape(t.title)}</strong>
+            <span class="tag pending">${escape(t.track)}</span>
+            <span class="spacer"></span>
+            <span class="muted">$${Number(t.pay_amount_usd).toFixed(2)}</span>
+          </div>
+          <p>${escape(t.brief)}</p>
+          <p><button class="btn sm" data-claim="${t.id}">Claim task</button> <span class="muted" id="claim-msg-${t.id}"></span></p>
+        </div>`).join("");
+      }
+
+      const paymentsEl = document.getElementById("payments");
+      const pay = data.payments || { list: [], total_earned: 0 };
+      if ((pay.list || []).length === 0) paymentsEl.innerHTML = `<p class="muted">No payments yet. Total earned: <strong>$${Number(pay.total_earned || 0).toFixed(2)}</strong>.</p>`;
+      else paymentsEl.innerHTML = `<p class="muted">Total earned: <strong>$${Number(pay.total_earned || 0).toFixed(2)}</strong>${pay.last_paid_at ? ' · last paid ' + new Date(pay.last_paid_at*1000).toISOString().slice(0,10) : ''}</p>` + `<table class="admin-table"><thead><tr><th>Amount</th><th>Method</th><th>Status</th><th>Queued</th><th>Paid</th></tr></thead><tbody>${(pay.list || []).map(p => `<tr><td>$${Number(p.amount_usd).toFixed(2)}</td><td>${escape(p.pay_method)}</td><td><span class="tag ${p.status}">${p.status}</span></td><td>${new Date(p.created_at*1000).toISOString().slice(0,10)}</td><td>${p.paid_at ? new Date(p.paid_at*1000).toISOString().slice(0,10) : "—"}</td></tr>`).join("")}</tbody></table>`;
+    }
+
+    document.body.addEventListener("click", async (e) => {
+      const claim = e.target.closest("[data-claim]");
+      const submit = e.target.closest("[data-submit]");
+      if (claim) {
+        const id = claim.dataset.claim;
+        const msg = document.getElementById("claim-msg-" + id);
+        msg.textContent = "Claiming…";
+        try {
+          const res = await fetch("/api/worker/claim-task", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, task_id: id }) });
+          const data = await res.json();
+          msg.textContent = data.ok ? "Claimed. Refreshing…" : (data.error || "Failed.");
+          if (data.ok) load();
+        } catch (e) { msg.textContent = "Network error."; }
+        return;
+      }
+      if (submit) {
+        const id = submit.dataset.submit;
+        const ta = document.getElementById("sub-" + id);
+        const msg = document.getElementById("submit-msg-" + id);
+        if (!ta.value.trim()) { msg.textContent = "Write something first."; return; }
+        msg.textContent = "Submitting…";
+        try {
+          const res = await fetch("/api/worker/submit-task", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, assignment_id: id, submission_text: ta.value }) });
+          const data = await res.json();
+          msg.textContent = data.ok ? "Submitted. Awaiting admin review." : (data.error || "Failed.");
+          if (data.ok) load();
+        } catch (e) { msg.textContent = "Network error."; }
+        return;
+      }
+    });
+  </script>
+</body>
+</html>

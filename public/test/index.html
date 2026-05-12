@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skills test — Interns for AI</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a href="/" class="logo">Interns for AI</a>
+      <nav><a href="/about/">About</a></nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="timer-bar"><div id="timer" class="timer">--:--</div></div>
+    <h1 id="track-title">Skills test</h1>
+    <p id="track-sub" class="lede">Loading…</p>
+    <div id="error" class="error-box" style="display:none;"></div>
+    <div id="loading">Loading questions…</div>
+    <form id="test-form" style="display:none;">
+      <div id="questions"></div>
+      <p style="margin-top: 22px;">
+        <button class="btn" type="submit" id="submit-btn">Submit test</button>
+      </p>
+      <p class="tiny">Once you submit, you'll get an instant verdict and an email. The free-text answers are auto-graded against a rubric by Claude 3.5 Haiku; the multiple-choice answers are exact-match.</p>
+    </form>
+  </main>
+
+  <footer class="site-footer">
+    <a href="/">Home</a> · <a href="/about/">About</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a>
+  </footer>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const track = params.get("track") || "";
+    const token = params.get("token") || "";
+    const errBox = document.getElementById("error");
+    const loadingEl = document.getElementById("loading");
+    const form = document.getElementById("test-form");
+    const submitBtn = document.getElementById("submit-btn");
+    const timerEl = document.getElementById("timer");
+
+    const TRACK_LABEL = {
+      mechanical: "Mechanical (data entry, transcription)",
+      light_judgment: "Light judgment (proofreading, QA, classification)",
+      heavy_judgment: "Heavy judgment (copy-edit, translation, research)",
+      specialized: "Specialized (code review, technical writing, design)",
+      domain_expert: "Domain expert (legal, medical, finance)",
+    };
+
+    function showError(msg) {
+      errBox.textContent = msg;
+      errBox.style.display = "block";
+    }
+
+    function escape(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+    }
+
+    if (!track || !token) {
+      showError("Missing track or token. Apply at /apply/ first.");
+    } else {
+      document.getElementById("track-title").textContent = TRACK_LABEL[track] || track;
+      load();
+    }
+
+    let startTime = Date.now();
+    let durationMin = 30;
+    let intervalId = null;
+    function startTimer(minutes) {
+      durationMin = minutes;
+      startTime = Date.now();
+      function tick() {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const total = minutes * 60;
+        const remain = Math.max(0, total - elapsed);
+        const m = Math.floor(remain / 60), s = remain % 60;
+        timerEl.textContent = (remain > 0 ? "" : "OVER ") + `${m}:${s.toString().padStart(2,"0")}`;
+        timerEl.classList.toggle("over", remain === 0);
+      }
+      tick();
+      intervalId = setInterval(tick, 1000);
+    }
+
+    async function load() {
+      try {
+        const res = await fetch(`/api/test/${encodeURIComponent(track)}?token=${encodeURIComponent(token)}`);
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          showError(data.error || "Failed to load test.");
+          loadingEl.style.display = "none";
+          return;
+        }
+        renderQuestions(data.bank);
+        document.getElementById("track-sub").textContent = `${data.bank.questions.length} questions · ${data.bank.duration_minutes} minutes · pass at ${data.bank.pass_score}/100, shortlist at ${data.bank.shortlist_score}/100.`;
+        loadingEl.style.display = "none";
+        form.style.display = "block";
+        startTimer(data.bank.duration_minutes);
+      } catch (e) {
+        showError("Network error loading test.");
+        loadingEl.style.display = "none";
+      }
+    }
+
+    function renderQuestions(bank) {
+      const wrap = document.getElementById("questions");
+      bank.questions.forEach((q, i) => {
+        const div = document.createElement("div");
+        div.className = "q";
+        div.dataset.qid = q.id;
+        div.dataset.kind = q.kind;
+        let html = `<div class="q-num">Question ${i + 1} of ${bank.questions.length} · ${q.points} pts</div>`;
+        if (q.context) html += `<div class="q-context">${escape(q.context).replace(/\n/g, "<br>")}</div>`;
+        html += `<div class="q-prompt">${escape(q.prompt).replace(/\n/g, "<br>")}</div>`;
+        if (q.kind === "mcq") {
+          html += `<div class="options">`;
+          q.options.forEach((opt, idx) => {
+            html += `<label><input type="radio" name="${q.id}" value="${idx}"> ${escape(opt)}</label>`;
+          });
+          html += `</div>`;
+        } else if (q.kind === "short") {
+          html += `<textarea name="${q.id}" rows="3" style="width:100%;padding:8px;font:inherit;border:1px solid var(--rule);border-radius:5px;"></textarea>`;
+        } else if (q.kind === "sample") {
+          const target = q.word_target ? `Target: ~${q.word_target} words.` : "";
+          html += `<textarea name="${q.id}" rows="6" style="width:100%;padding:8px;font:inherit;border:1px solid var(--rule);border-radius:5px;"></textarea><div class="tiny" id="wc-${q.id}">0 words. ${target}</div>`;
+        }
+        div.innerHTML = html;
+        wrap.appendChild(div);
+        if (q.kind === "sample") {
+          const ta = div.querySelector("textarea");
+          const wc = div.querySelector(`#wc-${q.id}`);
+          ta.addEventListener("input", () => {
+            const words = ta.value.trim().split(/\s+/).filter(Boolean).length;
+            wc.textContent = `${words} words. ${q.word_target ? "Target: ~" + q.word_target + " words." : ""}`;
+          });
+        }
+      });
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Grading… (10-30s)";
+
+      const answers = {};
+      document.querySelectorAll("#questions .q").forEach((qel) => {
+        const qid = qel.dataset.qid;
+        const kind = qel.dataset.kind;
+        if (kind === "mcq") {
+          const checked = qel.querySelector(`input[name="${qid}"]:checked`);
+          answers[qid] = checked ? Number(checked.value) : -1;
+        } else {
+          const ta = qel.querySelector(`textarea[name="${qid}"]`);
+          answers[qid] = ta ? ta.value : "";
+        }
+      });
+
+      const duration_seconds = Math.floor((Date.now() - startTime) / 1000);
+      if (intervalId) clearInterval(intervalId);
+
+      try {
+        const res = await fetch("/api/test-submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, track, answers, duration_seconds }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          showError(data.error || "Submission failed.");
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Submit test";
+          return;
+        }
+        const params = new URLSearchParams({
+          verdict: data.verdict,
+          score: String(data.score_total),
+          track,
+        });
+        if (data.dashboard_url) params.set("dashboard", data.dashboard_url);
+        window.location.href = `/test/done/?${params.toString()}`;
+      } catch (e) {
+        showError("Network error during submission.");
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit test";
+      }
+    });
+  </script>
+</body>
+</html>

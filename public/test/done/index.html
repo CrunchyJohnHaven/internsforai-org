@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Test result — Interns for AI</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a href="/" class="logo">Interns for AI</a>
+      <nav><a href="/about/">About</a></nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1 id="title">Test result</h1>
+    <p class="lede" id="lede"></p>
+    <div id="actions"></div>
+    <p class="muted">A copy of this verdict has been emailed to you. If you have questions, reply to that email — a human reads every reply.</p>
+  </main>
+
+  <footer class="site-footer">
+    <a href="/">Home</a> · <a href="/about/">About</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a>
+  </footer>
+
+  <script>
+    const p = new URLSearchParams(window.location.search);
+    const verdict = p.get("verdict") || "fail";
+    const score = Number(p.get("score") || 0);
+    const track = p.get("track") || "";
+    const dashboard = p.get("dashboard") || "";
+    const titleEl = document.getElementById("title");
+    const ledeEl = document.getElementById("lede");
+    const actions = document.getElementById("actions");
+
+    if (verdict === "pass") {
+      titleEl.innerHTML = "Pass <span class=\"tag pass\">PASS</span>";
+      ledeEl.textContent = `You scored ${score}/100 on the ${track.replace(/_/g, " ")} test. A $2 trial task is on its way within 24 hours.`;
+      if (dashboard) actions.innerHTML = `<p><a class="btn" href="${dashboard}">Open your worker dashboard</a></p>`;
+    } else if (verdict === "shortlist") {
+      titleEl.innerHTML = "Shortlist <span class=\"tag shortlist\">SHORTLIST</span>";
+      ledeEl.textContent = `You scored ${score}/100 — close to the pass bar. We're keeping you on the shortlist and will reach out when a task that fits your profile opens up.`;
+      if (dashboard) actions.innerHTML = `<p><a class="btn secondary" href="${dashboard}">Open your worker dashboard</a></p>`;
+    } else {
+      titleEl.innerHTML = "Not this time <span class=\"tag fail\">DID NOT PASS</span>";
+      ledeEl.textContent = `Your score was ${score}/100, below our current bar for ${track.replace(/_/g, " ")}. You're welcome to try a different skill track in two weeks.`;
+      actions.innerHTML = `<p><a class="btn secondary" href="/apply/">Apply for a different track</a></p>`;
+    }
+  </script>
+</body>
+</html>

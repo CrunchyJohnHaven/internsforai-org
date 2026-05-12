@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Application received — Interns for AI</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a href="/" class="logo">Interns for AI</a>
+      <nav><a href="/about/">About</a></nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>Application received.</h1>
+    <p class="lede">Two ways to take the 30-minute skills test.</p>
+
+    <div class="card">
+      <h3 style="margin-top: 0;">Right now (recommended)</h3>
+      <p>First hires go to applicants who finish tonight. Pick a track:</p>
+      <p id="track-links" class="muted">Loading your tracks…</p>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top: 0;">Later</h3>
+      <p>The links above stay valid for 14 days. We also emailed you the same links.</p>
+    </div>
+
+    <p class="muted">After the test you get a pass/shortlist/fail email. Pass → a $2 paid trial task within 24 hours.</p>
+  </main>
+
+  <footer class="site-footer">
+    <a href="/">Home</a> · <a href="/about/">About</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a>
+  </footer>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token") || "";
+    const trackLabels = {
+      mechanical: "Mechanical (data entry, transcription)",
+      light_judgment: "Light judgment (proofreading, QA, classification)",
+      heavy_judgment: "Heavy judgment (copy-edit, translation)",
+      specialized: "Specialized (code review, technical writing)",
+      domain_expert: "Domain expert (legal, medical, finance)",
+    };
+    const tracks = ["mechanical","light_judgment","heavy_judgment","specialized","domain_expert"];
+    const ul = document.createElement("ul");
+    for (const t of tracks) {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.href = `/test/?track=${encodeURIComponent(t)}&token=${encodeURIComponent(token)}`;
+      a.textContent = trackLabels[t];
+      li.appendChild(a);
+      ul.appendChild(li);
+    }
+    const container = document.getElementById("track-links");
+    if (token) {
+      container.innerHTML = "";
+      container.appendChild(ul);
+    } else {
+      container.textContent = "Missing session token. Open the link in the confirmation email or apply again at /apply/.";
+    }
+  </script>
+</body>
+</html>

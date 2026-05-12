@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy — Interns for AI</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a href="/" class="logo">Interns for AI</a>
+      <nav><a href="/apply/">Apply</a></nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>Privacy</h1>
+    <p class="muted">Effective May 11, 2026. This is a v0 policy for a launch MVP. We will revise as the product grows. If anything here changes materially we will email everyone with an active account.</p>
+
+    <h2>What we collect</h2>
+    <ul>
+      <li><strong>Application data.</strong> Email, display name, country, timezone, language(s), the skill tracks you picked, your two free-text answers, an optional sample-work URL, your availability, and your payment preference + address.</li>
+      <li><strong>Test answers.</strong> Multiple-choice picks and free-text responses for the 30-minute skills test. Free-text answers are auto-graded against a rubric by Anthropic's Claude 3.5 Haiku; that submission is sent to Anthropic's API and is subject to their data-handling terms (no training on API content as of their published policy).</li>
+      <li><strong>Task work.</strong> The text you submit for paid tasks, plus metadata (claimed-at, submitted-at, admin quality score, admin notes).</li>
+      <li><strong>Payment records.</strong> The amount, currency, method, destination address (USDC wallet, Wise/PayPal email), status, and any external transaction reference.</li>
+      <li><strong>Standard server logs.</strong> Cloudflare-level access logs (IP, user agent, timestamps) for security and abuse prevention.</li>
+    </ul>
+
+    <h2>What we do with it</h2>
+    <ul>
+      <li>Run the marketplace: route work, grade tests, pay you.</li>
+      <li>Send transactional email (application confirmation, test verdict, task invitation, payment notification) via Resend.</li>
+      <li>Compute and display your reputation score.</li>
+      <li>Respond to your support emails. A human reads every reply.</li>
+    </ul>
+
+    <h2>What we do NOT do</h2>
+    <ul>
+      <li>We do not sell your data.</li>
+      <li>We do not share your data with advertisers, brokers, or third-party recruiters.</li>
+      <li>We do not train AI models on your work product without your explicit per-task consent (and we do not do this in v0 at all).</li>
+    </ul>
+
+    <h2>Sub-processors</h2>
+    <ul>
+      <li><strong>Cloudflare</strong> — hosting, edge functions, D1 database.</li>
+      <li><strong>Anthropic</strong> — auto-grading of free-text test answers via the Claude API.</li>
+      <li><strong>Resend</strong> — transactional email delivery.</li>
+      <li>Payment rails: <strong>Wise</strong>, <strong>PayPal</strong>, or on-chain USDC (Ethereum / Solana) depending on your choice.</li>
+    </ul>
+
+    <h2>Retention</h2>
+    <p>
+      Applications are retained for 24 months by default. Test attempts and task submissions are
+      retained for 24 months. Payment records are retained for at least 7 years to comply with tax
+      and accounting law. You can request deletion of your application and free-text answers at any
+      time (see below); we will honour the request within 30 days, retaining only the minimum
+      necessary payment records.
+    </p>
+
+    <h2>Your rights (GDPR-style minimum)</h2>
+    <ul>
+      <li><strong>Access.</strong> Email us and we will send you a JSON export of your data.</li>
+      <li><strong>Correction.</strong> Email us and we will fix anything wrong.</li>
+      <li><strong>Deletion.</strong> Email us and we will delete you within 30 days.</li>
+      <li><strong>Objection.</strong> If you object to any specific processing, email us and we will stop it (or close your account).</li>
+    </ul>
+
+    <h2>How to contact us</h2>
+    <p>
+      Email <a href="mailto:calm@thecreativitymachine.ai">calm@thecreativitymachine.ai</a>. We are
+      a small team and a human will reply within a few business days.
+    </p>
+
+    <h2>Cookies</h2>
+    <p>
+      We use one cookie: <code>ifa_admin</code>, which holds an HMAC-like admin session token,
+      only set for site administrators. No analytics cookies, no advertising cookies.
+    </p>
+
+    <h2>Children</h2>
+    <p>
+      InternsForAI is not for users under 18. Do not apply if you are under 18.
+    </p>
+
+    <p class="muted" style="margin-top: 32px;">Operator: The Creativity Machine, Washington DC.</p>
+  </main>
+
+  <footer class="site-footer">
+    <a href="/">Home</a> · <a href="/about/">About</a> · <a href="/terms/">Terms</a>
+  </footer>
+</body>
+</html>
