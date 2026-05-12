@@ -227,8 +227,8 @@
           `).join("")}
 
           <h3>Assignments</h3>
-          ${(detail.assignments || []).length === 0 ? '<p class="muted">No assignments yet.</p>' : `<table class="admin-table"><thead><tr><th>Task</th><th>Pay</th><th>Status</th><th>Quality</th><th>Claimed</th></tr></thead><tbody>${
-            (detail.assignments || []).map(t => `<tr><td>${escape(t.title)}${t.is_trial ? ' <span class="tag shortlist">trial</span>' : ''}</td><td>$${Number(t.pay_amount_usd).toFixed(2)}</td><td><span class="tag ${t.status}">${t.status}</span></td><td>${t.quality_score == null ? "—" : Math.round(t.quality_score) + "/100"}</td><td>${new Date(t.claimed_at * 1000).toISOString().slice(0,16).replace("T"," ")}</td></tr>`).join("")
+          ${(detail.assignments || []).length === 0 ? '<p class="muted">No assignments yet.</p>' : `<table class="admin-table"><thead><tr><th>Task</th><th>Pay</th><th>Status</th><th>Quality</th><th>Claimed</th><th></th></tr></thead><tbody>${
+            (detail.assignments || []).map(t => `<tr><td>${escape(t.title)}${t.is_trial ? ' <span class="tag shortlist">trial</span>' : ''}${t.submission_text ? `<details style="margin-top:4px;"><summary class="muted">View submission</summary><pre class="json" style="white-space:pre-wrap;">${escape(t.submission_text)}</pre></details>` : ''}</td><td>$${Number(t.pay_amount_usd).toFixed(2)}</td><td><span class="tag ${t.status}">${t.status}</span></td><td>${t.quality_score == null ? "—" : Math.round(t.quality_score) + "/100"}</td><td>${new Date(t.claimed_at * 1000).toISOString().slice(0,16).replace("T"," ")}</td><td>${t.status === 'submitted' ? `<button class="btn sm" data-review="${t.id}">Review</button>` : ''}</td></tr>${t.status === 'submitted' ? `<tr id="review-row-${t.id}" style="display:none;"><td colspan="6"><div style="padding:8px;background:#f6f3eb;border-radius:5px;"><label class="muted" style="display:block;font-size:13px;margin-bottom:4px;">Quality score (0-100)</label><input id="quality-${t.id}" type="number" min="0" max="100" value="85" style="width:90px;padding:6px 8px;font:inherit;border:1px solid var(--rule);border-radius:4px;"><label class="muted" style="display:block;font-size:13px;margin-top:8px;margin-bottom:4px;">Admin review notes</label><textarea id="review-${t.id}" rows="2" style="width:100%;padding:8px;font:inherit;border:1px solid var(--rule);border-radius:5px;" placeholder="Optional notes shown internally + emailed to worker."></textarea><div style="margin-top:8px;display:flex;gap:6px;"><button class="btn sm" data-review-accept="${t.id}">Accept &amp; queue payment</button><button class="btn sm secondary" data-review-reject="${t.id}">Reject</button></div></div></td></tr>` : ''}`).join("")
           }</tbody></table>`}
 
           <h3>Payments</h3>
@@ -239,6 +239,35 @@
       pane.innerHTML = html;
       pane.querySelectorAll("[data-status]").forEach(b => b.addEventListener("click", () => disposition(a.id, b.dataset.status)));
       document.getElementById("send-trial").addEventListener("click", () => sendTrial(a.id));
+      pane.querySelectorAll("[data-review]").forEach(b => b.addEventListener("click", () => {
+        const row = document.getElementById(`review-row-${b.dataset.review}`);
+        if (row) row.style.display = row.style.display === "none" ? "table-row" : "none";
+      }));
+      pane.querySelectorAll("[data-review-accept]").forEach(b => b.addEventListener("click", () => reviewTask(a.id, b.dataset.reviewAccept, "accept")));
+      pane.querySelectorAll("[data-review-reject]").forEach(b => b.addEventListener("click", () => reviewTask(a.id, b.dataset.reviewReject, "reject")));
+    }
+
+    async function reviewTask(applicantId, assignmentId, decision) {
+      const msg = document.getElementById("action-msg");
+      const quality = Number((document.getElementById(`quality-${assignmentId}`) || {}).value || 0);
+      const notes = ((document.getElementById(`review-${assignmentId}`) || {}).value || "").trim();
+      msg.textContent = `Submitting ${decision}…`;
+      try {
+        const res = await fetch("/api/admin/review-task", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ assignment_id: assignmentId, decision, quality_score: quality, admin_review: notes }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          msg.textContent = decision === "accept" ? `Accepted. Payment queued (${data.payment_id}).` : `Rejected.`;
+          tryLoadDashboard();
+          openDetail(applicantId);
+        } else {
+          msg.textContent = data.error || "Failed.";
+        }
+      } catch (e) { msg.textContent = "Network error."; }
     }
 
     async function disposition(applicantId, status) {

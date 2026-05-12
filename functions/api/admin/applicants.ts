@@ -72,7 +72,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
         "SELECT id, track, score_total, verdict, duration_seconds, created_at, answers, per_question_scores, ai_feedback FROM test_attempts WHERE applicant_id = ?1 ORDER BY created_at DESC"
       ).bind(applicantId).all();
       const assignments = await ctx.env.DB.prepare(
-        `SELECT ta.id, ta.task_id, ta.claimed_at, ta.submitted_at, ta.quality_score, ta.status, t.title, t.pay_amount_usd, t.is_trial
+        `SELECT ta.id, ta.task_id, ta.claimed_at, ta.submitted_at, ta.submission_text, ta.quality_score, ta.admin_review, ta.status, t.title, t.pay_amount_usd, t.is_trial
            FROM task_assignments ta JOIN tasks t ON t.id = ta.task_id
           WHERE ta.applicant_id = ?1 ORDER BY ta.claimed_at DESC`
       ).bind(applicantId).all();
