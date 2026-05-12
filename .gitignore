@@ -1,0 +1,14 @@
+node_modules/
+.wrangler/
+.dev.vars
+.dev.vars.*
+.env
+.env.local
+.env.*
+*.log
+.DS_Store
+dist/
+.cache/
+.cloudflare/
+coverage/
+.dev.vars

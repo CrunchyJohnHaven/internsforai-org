@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin — Interns for AI</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a href="/" class="logo">Interns for AI</a>
+      <nav><a href="#" id="logout">Logout</a></nav>
+    </div>
+  </header>
+
+  <main class="container-wide">
+    <h1>Admin</h1>
+
+    <div id="login-pane" class="card" style="max-width: 480px;">
+      <h3 style="margin-top: 0;">Sign in</h3>
+      <p class="muted">Paste the ADMIN_TOKEN from the Cloudflare Pages env vars.</p>
+      <input id="token-input" type="password" placeholder="ADMIN_TOKEN" style="width:100%;padding:9px;font:inherit;border:1px solid var(--rule);border-radius:5px;">
+      <p><button class="btn" id="login-btn">Sign in</button></p>
+      <p id="login-err" class="error-box" style="display:none;"></p>
+    </div>
+
+    <div id="dash" style="display:none;">
+      <div class="stat-grid">
+        <div class="stat"><div class="n" id="s-total">—</div><div class="l">total applicants</div></div>
+        <div class="stat"><div class="n" id="s-pending">—</div><div class="l">pending</div></div>
+        <div class="stat"><div class="n" id="s-shortlist">—</div><div class="l">shortlist</div></div>
+        <div class="stat"><div class="n" id="s-hired">—</div><div class="l">hired</div></div>
+        <div class="stat"><div class="n" id="s-paid">—</div><div class="l">converted to paid</div></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top: 0;">Top of funnel by track</h3>
+        <div id="track-stats"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top: 0;">Mean test score</h3>
+        <div class="row-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div>
+            <strong>By track</strong>
+            <div id="mean-track-stats"></div>
+          </div>
+          <div>
+            <strong>By country</strong>
+            <div id="mean-country-stats"></div>
+          </div>
+        </div>
+      </div>
+
+      <h2>Applicants</h2>
+      <div class="flex flex-wrap" style="gap:8px;margin:10px 0;">
+        <select id="f-track"><option value="">All tracks</option><option value="mechanical">mechanical</option><option value="light_judgment">light_judgment</option><option value="heavy_judgment">heavy_judgment</option><option value="specialized">specialized</option><option value="domain_expert">domain_expert</option></select>
+        <select id="f-status"><option value="">All statuses</option><option>pending</option><option>shortlist</option><option>hired</option><option>disqualified</option><option>inactive</option></select>
+        <input id="f-country" placeholder="Country (US/PH/IN/...)" style="padding:6px 8px;font:inherit;border:1px solid var(--rule);border-radius:4px;width:170px;">
+        <input id="f-q" placeholder="Search name or email" style="padding:6px 8px;font:inherit;border:1px solid var(--rule);border-radius:4px;width:220px;">
+        <button class="btn sm" id="refresh">Refresh</button>
+      </div>
+
+      <table class="admin-table">
+        <thead>
+          <tr><th>Name</th><th>Email</th><th>Country</th><th>Tracks</th><th>Avail (h/wk)</th><th>Test</th><th>Status</th><th>Applied</th><th></th></tr>
+        </thead>
+        <tbody id="applicants-body"></tbody>
+      </table>
+
+      <div id="detail-pane" style="margin-top: 20px;"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <a href="/">Home</a> · <a href="/about/">About</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a>
+  </footer>
+
+  <script>
+    const TRACKS = ["mechanical","light_judgment","heavy_judgment","specialized","domain_expert"];
+    const loginPane = document.getElementById("login-pane");
+    const dash = document.getElementById("dash");
+    const loginBtn = document.getElementById("login-btn");
+    const tokenInput = document.getElementById("token-input");
+    const loginErr = document.getElementById("login-err");
+    const logoutBtn = document.getElementById("logout");
+    let lastApplicants = [];
+
+    function escape(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+    }
+    function showError(el, msg) { el.textContent = msg; el.style.display = "block"; }
+
+    async function tryLoadDashboard() {
+      // Refresh with current filters
+      const f = {
+        track: document.getElementById("f-track").value,
+        status: document.getElementById("f-status").value,
+        country: document.getElementById("f-country").value,
+        q: document.getElementById("f-q").value,
+      };
+      const qs = new URLSearchParams();
+      for (const k of Object.keys(f)) if (f[k]) qs.set(k, f[k]);
+      const url = "/api/admin/applicants" + (qs.toString() ? "?" + qs.toString() : "");
+      try {
+        const res = await fetch(url, { credentials: "include" });
+        if (res.status === 401) return false;
+        const data = await res.json();
+        if (!data.ok) return false;
+        renderDashboard(data);
+        return true;
+      } catch (e) { return false; }
+    }
+
+    function renderDashboard(data) {
+      loginPane.style.display = "none";
+      dash.style.display = "block";
+      lastApplicants = data.applicants || [];
+      const s = data.stats || {};
+      document.getElementById("s-total").textContent = s.total_applicants ?? 0;
+      document.getElementById("s-paid").textContent = s.converted_to_paid ?? 0;
+      const byStatus = (s.by_status || []).reduce((acc, r) => { acc[r.status] = r.n; return acc; }, {});
+      document.getElementById("s-pending").textContent = byStatus.pending || 0;
+      document.getElementById("s-shortlist").textContent = byStatus.shortlist || 0;
+      document.getElementById("s-hired").textContent = byStatus.hired || 0;
+
+      const t = s.by_track || {};
+      const trackHtml = TRACKS.map(k => `<div class="stat" style="display:inline-block;margin:4px;min-width:130px;"><div class="n">${t[k] || 0}</div><div class="l">${k}</div></div>`).join("");
+      document.getElementById("track-stats").innerHTML = trackHtml;
+
+      const meanTrack = (s.mean_score_by_track || []).map(r => `<div>${r.track}: <strong>${Math.round(r.mean_score || 0)}</strong> <span class="muted">(${r.attempts} attempts)</span></div>`).join("");
+      document.getElementById("mean-track-stats").innerHTML = meanTrack || '<span class="muted">No attempts yet.</span>';
+
+      const meanCountry = (s.mean_score_by_country || []).slice(0, 12).map(r => `<div>${r.country}: <strong>${Math.round(r.mean_score || 0)}</strong> <span class="muted">(${r.attempts})</span></div>`).join("");
+      document.getElementById("mean-country-stats").innerHTML = meanCountry || '<span class="muted">No attempts yet.</span>';
+
+      const body = document.getElementById("applicants-body");
+      body.innerHTML = "";
+      if (lastApplicants.length === 0) {
+        body.innerHTML = `<tr><td colspan="9" class="muted" style="text-align:center;padding:20px;">No applicants match.</td></tr>`;
+      } else {
+        for (const a of lastApplicants) {
+          const tracks = (() => { try { return JSON.parse(a.tracks || "[]"); } catch { return []; } })().join(", ");
+          const applied = new Date(a.created_at * 1000).toISOString().slice(0, 10);
+          const verdict = a.latest_verdict;
+          const verdictTag = verdict ? `<span class="tag ${verdict}">${verdict}</span> ${Math.round(a.latest_score || 0)}/100` : '<span class="muted">—</span>';
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><a href="#" data-id="${a.id}" class="open-detail">${escape(a.display_name)}</a></td>
+            <td>${escape(a.email)}</td>
+            <td>${escape(a.country)}</td>
+            <td><span class="muted">${escape(tracks)}</span></td>
+            <td>${a.availability_hours}</td>
+            <td>${verdictTag}</td>
+            <td><span class="tag ${a.status}">${a.status}</span></td>
+            <td><span class="muted">${applied}</span></td>
+            <td><button class="btn sm secondary open-detail" data-id="${a.id}">Open</button></td>`;
+          body.appendChild(tr);
+        }
+      }
+
+      // If applicant_id was set in URL, also fetch its detail.
+      const url = new URL(window.location.href);
+      const aid = url.searchParams.get("applicant");
+      if (aid && (!data.detail || (data.detail && data.detail.applicant && data.detail.applicant.id !== aid))) {
+        openDetail(aid);
+      } else if (data.detail) {
+        renderDetail(data.detail);
+      }
+    }
+
+    async function openDetail(applicantId) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("applicant", applicantId);
+      window.history.replaceState(null, "", url.toString());
+      const res = await fetch(`/api/admin/applicants?applicant_id=${encodeURIComponent(applicantId)}`, { credentials: "include" });
+      const data = await res.json();
+      if (data.ok && data.detail) {
+        renderDashboard(data);
+      }
+    }
+
+    function renderDetail(detail) {
+      const pane = document.getElementById("detail-pane");
+      if (!detail || !detail.applicant) { pane.innerHTML = ""; return; }
+      const a = detail.applicant;
+      let tracks = []; try { tracks = JSON.parse(a.tracks || "[]"); } catch {}
+      const langs = (() => { try { return JSON.parse(a.other_languages || "[]"); } catch { return []; } })();
+      const html = `
+        <div class="card">
+          <h2 style="margin-top:0;">${escape(a.display_name)} <span class="tag ${a.status}">${a.status}</span></h2>
+          <div class="kv">
+            <div class="k">Email</div><div>${escape(a.email)}</div>
+            <div class="k">Country / TZ</div><div>${escape(a.country)} · ${escape(a.timezone)}</div>
+            <div class="k">Languages</div><div>${escape(a.native_language || "—")}${langs.length ? " + " + langs.map(escape).join(", ") : ""}</div>
+            <div class="k">Tracks</div><div>${tracks.map(escape).join(", ")}</div>
+            <div class="k">Availability</div><div>${a.availability_hours} h/wk</div>
+            <div class="k">Pay</div><div>${escape(a.pay_method)} → <code>${escape(a.pay_address)}</code></div>
+            <div class="k">Sample URL</div><div>${a.sample_url ? `<a href="${escape(a.sample_url)}" target="_blank" rel="noopener noreferrer">${escape(a.sample_url)}</a>` : "—"}</div>
+            <div class="k">Applied</div><div>${new Date(a.created_at * 1000).toISOString()}</div>
+            <div class="k">Reputation</div><div>${Math.round(a.reputation || 0)}/100</div>
+          </div>
+          <h3>Pitch</h3><p>${escape(a.pitch)}</p>
+          <h3>Thoughtful catch</h3><p>${escape(a.thoughtful_catch)}</p>
+          <h3>Admin notes</h3>
+          <textarea id="admin-notes" rows="3" style="width:100%;padding:8px;font:inherit;border:1px solid var(--rule);border-radius:5px;">${escape(a.admin_notes || "")}</textarea>
+
+          <h3>Status & actions</h3>
+          <div class="flex flex-wrap" style="gap:6px;">
+            ${["pending","shortlist","hired","disqualified","inactive"].map(s => `<button class="btn sm secondary" data-status="${s}">Mark ${s}</button>`).join("")}
+            <button class="btn sm" id="send-trial">Send $2 trial task</button>
+          </div>
+          <p id="action-msg" class="muted"></p>
+
+          <h3>Test attempts</h3>
+          ${(detail.attempts || []).length === 0 ? '<p class="muted">No attempts yet.</p>' : (detail.attempts || []).map(att => `
+            <div class="card" style="margin: 8px 0;">
+              <div><strong>${escape(att.track)}</strong> · <span class="tag ${att.verdict}">${att.verdict}</span> · ${Math.round(att.score_total || 0)}/100 · <span class="muted">${new Date(att.created_at * 1000).toISOString()}</span></div>
+              <details>
+                <summary class="muted">View answers</summary>
+                <pre class="json">${escape(att.answers)}</pre>
+                <pre class="json">${escape(att.per_question_scores)}</pre>
+                <pre class="json">${escape(att.ai_feedback)}</pre>
+              </details>
+            </div>
+          `).join("")}
+
+          <h3>Assignments</h3>
+          ${(detail.assignments || []).length === 0 ? '<p class="muted">No assignments yet.</p>' : `<table class="admin-table"><thead><tr><th>Task</th><th>Pay</th><th>Status</th><th>Quality</th><th>Claimed</th></tr></thead><tbody>${
+            (detail.assignments || []).map(t => `<tr><td>${escape(t.title)}${t.is_trial ? ' <span class="tag shortlist">trial</span>' : ''}</td><td>$${Number(t.pay_amount_usd).toFixed(2)}</td><td><span class="tag ${t.status}">${t.status}</span></td><td>${t.quality_score == null ? "—" : Math.round(t.quality_score) + "/100"}</td><td>${new Date(t.claimed_at * 1000).toISOString().slice(0,16).replace("T"," ")}</td></tr>`).join("")
+          }</tbody></table>`}
+
+          <h3>Payments</h3>
+          ${(detail.payments || []).length === 0 ? '<p class="muted">No payments yet.</p>' : `<table class="admin-table"><thead><tr><th>Amount</th><th>Method</th><th>Status</th><th>Queued</th><th>Paid</th></tr></thead><tbody>${
+            (detail.payments || []).map(p => `<tr><td>$${Number(p.amount_usd).toFixed(2)}</td><td>${escape(p.pay_method)}</td><td><span class="tag ${p.status}">${p.status}</span></td><td>${new Date(p.created_at * 1000).toISOString().slice(0,16).replace("T"," ")}</td><td>${p.paid_at ? new Date(p.paid_at * 1000).toISOString().slice(0,16).replace("T"," ") : "—"}</td></tr>`).join("")
+          }</tbody></table>`}
+        </div>`;
+      pane.innerHTML = html;
+      pane.querySelectorAll("[data-status]").forEach(b => b.addEventListener("click", () => disposition(a.id, b.dataset.status)));
+      document.getElementById("send-trial").addEventListener("click", () => sendTrial(a.id));
+    }
+
+    async function disposition(applicantId, status) {
+      const notes = (document.getElementById("admin-notes") || {}).value || "";
+      const msg = document.getElementById("action-msg");
+      msg.textContent = "Updating…";
+      try {
+        const res = await fetch("/api/admin/disposition", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ applicant_id: applicantId, status, admin_notes: notes }),
+        });
+        const data = await res.json();
+        msg.textContent = data.ok ? `Status set to ${status}.` : (data.error || "Failed.");
+        if (data.ok) { tryLoadDashboard(); openDetail(applicantId); }
+      } catch (e) { msg.textContent = "Network error."; }
+    }
+
+    async function sendTrial(applicantId) {
+      const msg = document.getElementById("action-msg");
+      msg.textContent = "Creating trial task and emailing applicant…";
+      try {
+        const res = await fetch("/api/admin/send-trial-task", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ applicant_id: applicantId, pay_amount_usd: 2, deadline_hours: 24, track: "light_judgment" }),
+        });
+        const data = await res.json();
+        msg.innerHTML = data.ok ? `Trial task created. Worker dashboard link: <code>${escape(data.dashboard_url)}</code>` : (data.error || "Failed.");
+        if (data.ok) openDetail(applicantId);
+      } catch (e) { msg.textContent = "Network error."; }
+    }
+
+    document.body.addEventListener("click", (e) => {
+      const a = e.target.closest(".open-detail");
+      if (a) { e.preventDefault(); openDetail(a.dataset.id); return; }
+    });
+    document.getElementById("refresh").addEventListener("click", tryLoadDashboard);
+    ["f-track","f-status","f-country","f-q"].forEach(id => document.getElementById(id).addEventListener("change", tryLoadDashboard));
+    document.getElementById("f-q").addEventListener("input", () => { clearTimeout(window._q); window._q = setTimeout(tryLoadDashboard, 300); });
+
+    loginBtn.addEventListener("click", async () => {
+      loginErr.style.display = "none";
+      const tok = tokenInput.value.trim();
+      if (!tok) { showError(loginErr, "Paste the ADMIN_TOKEN."); return; }
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: tok }),
+      });
+      if (res.ok) tryLoadDashboard();
+      else showError(loginErr, "Wrong token.");
+    });
+    tokenInput.addEventListener("keydown", (e) => { if (e.key === "Enter") loginBtn.click(); });
+
+    logoutBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      await fetch("/api/admin/login", { method: "DELETE", credentials: "include" });
+      dash.style.display = "none";
+      loginPane.style.display = "block";
+    });
+
+    // Try cookie-based auth first.
+    tryLoadDashboard();
+  </script>
+</body>
+</html>

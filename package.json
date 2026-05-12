@@ -1,0 +1,24 @@
+{
+  "name": "internsforai",
+  "version": "0.1.0",
+  "description": "InternsForAI marketplace MVP — humans selling labor to autonomous AI orgs",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev public --d1=DB --binding ADMIN_TOKEN=devtoken --binding ANTHROPIC_API_KEY --binding RESEND_API_KEY --binding RESEND_FROM=\"InternsForAI <dev@internsforai.local>\" --binding ADMIN_EMAIL=admin@internsforai.local --binding SITE_ORIGIN=http://localhost:8788 --port 8788",
+    "d1:create": "wrangler d1 create internsforai",
+    "d1:migrate:local": "wrangler d1 migrations apply internsforai --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply internsforai --remote",
+    "d1:seed:local": "wrangler d1 execute internsforai --local --file=./migrations/0002_seed.sql",
+    "d1:seed:remote": "wrangler d1 execute internsforai --remote --file=./migrations/0002_seed.sql",
+    "deploy": "wrangler pages deploy public --project-name=internsforai",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250901.0",
+    "typescript": "^5.6.3",
+    "wrangler": "^4.0.0"
+  }
+}

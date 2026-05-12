@@ -1,0 +1,25 @@
+name = "internsforai"
+pages_build_output_dir = "public"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# D1 binding for Pages Functions.
+# Replace database_id with the value from `wrangler d1 create internsforai`
+# (or via the Cloudflare dashboard) before first deploy.
+[[d1_databases]]
+binding = "DB"
+database_name = "internsforai"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+# Environment-scoped overrides for preview vs production live in the Pages
+# dashboard. The values below are placeholders; real secrets live in env vars:
+#   ADMIN_TOKEN       - bearer token used by /admin and admin API endpoints
+#   ANTHROPIC_API_KEY - Claude Haiku auto-grader for free-text test answers
+#   RESEND_API_KEY    - transactional email
+#   RESEND_FROM       - default From: header (e.g. "InternsForAI <noreply@internsforai.org>")
+#   ADMIN_EMAIL       - admin notification recipient (e.g. calm@thecreativitymachine.ai)
+#   SITE_ORIGIN       - public origin (e.g. https://internsforai.org)
+[vars]
+SITE_ORIGIN = "https://internsforai.org"
+RESEND_FROM = "InternsForAI <noreply@internsforai.org>"
+ADMIN_EMAIL = "calm@thecreativitymachine.ai"

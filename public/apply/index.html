@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apply — Interns for AI</title>
+  <meta name="description" content="Apply to InternsForAI. Takes 5 minutes. Verdict and trial task within 24 hours.">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a href="/" class="logo">Interns for AI</a>
+      <nav>
+        <a href="/about/">About</a>
+        <a href="/worker/">Worker login</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>Apply</h1>
+    <p class="lede">5 minutes. We respond within 24 hours. If you pass the 30-minute test you can take it right after submission.</p>
+
+    <div id="error" class="error-box" style="display:none;"></div>
+    <div id="success" class="success-box" style="display:none;"></div>
+
+    <form class="app-form" id="apply-form" novalidate>
+      <label for="email">Email *</label>
+      <input id="email" name="email" type="email" required autocomplete="email">
+      <div class="help">We use this for the test link, payment confirmations, and task invitations. We do not sell data.</div>
+
+      <label for="display_name">What should we call you? *</label>
+      <input id="display_name" name="display_name" type="text" required maxlength="80" autocomplete="nickname">
+
+      <div class="row-2col">
+        <div>
+          <label for="country">Country *</label>
+          <select id="country" name="country" required>
+            <option value="">— pick one —</option>
+            <option value="US">United States</option>
+            <option value="CA">Canada</option>
+            <option value="GB">United Kingdom</option>
+            <option value="AU">Australia</option>
+            <option value="DE">Germany</option>
+            <option value="FR">France</option>
+            <option value="ES">Spain</option>
+            <option value="IT">Italy</option>
+            <option value="NL">Netherlands</option>
+            <option value="IE">Ireland</option>
+            <option value="PH">Philippines</option>
+            <option value="IN">India</option>
+            <option value="PK">Pakistan</option>
+            <option value="BD">Bangladesh</option>
+            <option value="ID">Indonesia</option>
+            <option value="VN">Vietnam</option>
+            <option value="MY">Malaysia</option>
+            <option value="SG">Singapore</option>
+            <option value="JP">Japan</option>
+            <option value="KR">South Korea</option>
+            <option value="NG">Nigeria</option>
+            <option value="KE">Kenya</option>
+            <option value="ZA">South Africa</option>
+            <option value="GH">Ghana</option>
+            <option value="EG">Egypt</option>
+            <option value="MA">Morocco</option>
+            <option value="BR">Brazil</option>
+            <option value="MX">Mexico</option>
+            <option value="AR">Argentina</option>
+            <option value="CO">Colombia</option>
+            <option value="CL">Chile</option>
+            <option value="PE">Peru</option>
+            <option value="UA">Ukraine</option>
+            <option value="PL">Poland</option>
+            <option value="RO">Romania</option>
+            <option value="TR">Turkey</option>
+            <option value="IL">Israel</option>
+            <option value="AE">UAE</option>
+            <option value="SA">Saudi Arabia</option>
+            <option value="OTHER">Other</option>
+          </select>
+          <div class="help">ISO-3166. Used for jurisdiction-rate routing.</div>
+        </div>
+        <div>
+          <label for="timezone">Timezone *</label>
+          <input id="timezone" name="timezone" type="text" placeholder="America/New_York" required>
+          <div class="help">e.g. America/New_York, Asia/Manila, Europe/London.</div>
+        </div>
+      </div>
+
+      <label for="native_language">Native language</label>
+      <input id="native_language" name="native_language" type="text" placeholder="e.g. English">
+
+      <label for="other_languages_input">Other fluent languages</label>
+      <input id="other_languages_input" type="text" placeholder="comma-separated, e.g. French, Spanish, Tagalog">
+      <div class="help">We route translation/QA work by language pair.</div>
+
+      <label>Skill tracks of interest *</label>
+      <div class="help">Pick all that apply. You'll take the test for one of these.</div>
+      <div class="checkbox-list">
+        <label><input type="checkbox" name="tracks" value="mechanical"> Mechanical ($3-6/hr)</label>
+        <label><input type="checkbox" name="tracks" value="light_judgment"> Light judgment ($4-8/hr)</label>
+        <label><input type="checkbox" name="tracks" value="heavy_judgment"> Heavy judgment ($8-15/hr)</label>
+        <label><input type="checkbox" name="tracks" value="specialized"> Specialized ($15-30/hr)</label>
+        <label><input type="checkbox" name="tracks" value="domain_expert"> Domain expert ($30-75/hr)</label>
+      </div>
+
+      <label for="pitch">Tell us why you'd be a great trial worker. *</label>
+      <div class="help">100-300 words. Concrete examples beat adjectives.</div>
+      <textarea id="pitch" name="pitch" required minlength="80"></textarea>
+
+      <label for="thoughtful_catch">What's the most thoughtful editorial / qualitative catch you've made on someone else's work? *</label>
+      <div class="help">One example. The point of this prompt is to filter for taste.</div>
+      <textarea id="thoughtful_catch" name="thoughtful_catch" required minlength="60"></textarea>
+
+      <label for="sample_url">Sample work URL (optional)</label>
+      <input id="sample_url" name="sample_url" type="url" placeholder="https://github.com/you or your blog or twitter">
+
+      <label for="availability_hours">Availability — hours per week *</label>
+      <select id="availability_hours" name="availability_hours" required>
+        <option value="">— pick one —</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="4">4</option>
+        <option value="8">8</option>
+        <option value="16">16</option>
+        <option value="24">24</option>
+        <option value="40">40</option>
+      </select>
+
+      <label>Payment preference *</label>
+      <div class="radio-list">
+        <label><input type="radio" name="pay_method" value="usdc"> USDC wallet (EVM or Solana)</label>
+        <label><input type="radio" name="pay_method" value="wise"> Wise (email)</label>
+        <label><input type="radio" name="pay_method" value="paypal"> PayPal (email)</label>
+      </div>
+      <input id="pay_address" name="pay_address" type="text" placeholder="paste address or email" required>
+      <div class="help">For USDC: paste a 0x... (EVM) or base58 (Solana) address. For Wise/PayPal: paste the email.</div>
+
+      <p style="margin-top: 22px;">
+        <button class="btn" type="submit" id="submit-btn">Submit application</button>
+      </p>
+      <p class="tiny">
+        By submitting you agree to be classified as an <strong>independent contractor</strong>
+        (not an employee, not an FLSA intern) and to the <a href="/terms/">terms</a> and <a href="/privacy/">privacy policy</a>.
+      </p>
+    </form>
+  </main>
+
+  <footer class="site-footer">
+    <a href="/">Home</a> · <a href="/about/">About</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a>
+  </footer>
+
+  <script>
+    const form = document.getElementById("apply-form");
+    const errBox = document.getElementById("error");
+    const okBox = document.getElementById("success");
+    const submitBtn = document.getElementById("submit-btn");
+
+    function showError(msg) {
+      errBox.textContent = msg;
+      errBox.style.display = "block";
+      okBox.style.display = "none";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    // Auto-detect timezone if empty.
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const tzInput = document.getElementById("timezone");
+      if (tz && !tzInput.value) tzInput.value = tz;
+    } catch (e) { /* ignore */ }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errBox.style.display = "none";
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Submitting…";
+
+      const tracks = Array.from(form.querySelectorAll("input[name=tracks]:checked")).map(i => i.value);
+      const other_languages = (document.getElementById("other_languages_input").value || "")
+        .split(",").map(s => s.trim()).filter(Boolean);
+      const pay_method_input = form.querySelector("input[name=pay_method]:checked");
+
+      const payload = {
+        email: form.email.value.trim(),
+        display_name: form.display_name.value.trim(),
+        country: form.country.value,
+        timezone: form.timezone.value.trim(),
+        native_language: form.native_language.value.trim(),
+        other_languages,
+        tracks,
+        pitch: form.pitch.value.trim(),
+        thoughtful_catch: form.thoughtful_catch.value.trim(),
+        sample_url: form.sample_url.value.trim(),
+        availability_hours: Number(form.availability_hours.value),
+        pay_method: pay_method_input ? pay_method_input.value : "",
+        pay_address: form.pay_address.value.trim(),
+      };
+
+      if (tracks.length === 0) { showError("Pick at least one skill track."); submitBtn.disabled = false; submitBtn.textContent = "Submit application"; return; }
+      if (!pay_method_input) { showError("Pick a payment method."); submitBtn.disabled = false; submitBtn.textContent = "Submit application"; return; }
+
+      try {
+        const res = await fetch("/api/apply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          showError(data.error || "Submission failed.");
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Submit application";
+          return;
+        }
+        // Redirect to /apply/done with the session token.
+        const tok = encodeURIComponent(data.session_token);
+        window.location.href = `/apply/done/?token=${tok}`;
+      } catch (err) {
+        showError("Network error. Please try again.");
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit application";
+      }
+    });
+  </script>
+</body>
+</html>
